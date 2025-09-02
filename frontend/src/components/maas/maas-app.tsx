@@ -1,12 +1,12 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
+import { v4 as uuid } from "uuid"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { v4 as uuid } from "uuid"
 import type { HttpMethod, KeyValue, RequestModel, ResponseModel } from "@/lib/maas/types"
 import { loadHistory, saveHistory } from "@/lib/maas/storage"
 import { HeadersEditor } from "./parts/headers-editor"
@@ -15,7 +15,11 @@ import { BodyEditor } from "./parts/body-editor"
 import { ResponseViewer } from "./parts/response-viewer"
 import { Sidebar } from "./parts/sidebar"
 
+// available HTTP methods
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
+// allowed tab keys
+type TabKey = "request" | "response"
 
 function createEmptyKV(): KeyValue {
   return { id: uuid(), key: "", value: "", enabled: true }
@@ -39,8 +43,9 @@ export function MaaSApp() {
   const [history, setHistory] = useState<RequestModel[]>(() => loadHistory())
   const [sending, setSending] = useState(false)
   const [response, setResponse] = useState<ResponseModel | null>(null)
-  const [activeTab, setActiveTab] = useState<"request" | "response">("request")
+  const [activeTab, setActiveTab] = useState<TabKey>("request")
 
+  // compute final URL with params applied
   const finalUrl = useMemo(() => {
     try {
       if (!request.url) return ""
@@ -54,30 +59,38 @@ export function MaaSApp() {
     }
   }, [request.url, request.params])
 
+  // prepare headers map
   const effectiveHeaders = useMemo(() => {
     const map = new Map<string, string>()
     for (const h of request.headers.filter((h) => h.enabled && h.key)) {
       map.set(h.key, h.value)
     }
-    if (request.bodyMode === "json" && !map.has("Content-Type") && ["POST", "PUT", "PATCH"].includes(request.method)) {
+    if (
+      request.bodyMode === "json" &&
+      !map.has("Content-Type") &&
+      ["POST", "PUT", "PATCH"].includes(request.method)
+    ) {
       map.set("Content-Type", "application/json")
     }
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
   }, [request.headers, request.bodyMode, request.method])
 
+  // handle updates to params/headers editors
   const onChangeKV = useCallback(
     (key: "params" | "headers", rows: KeyValue[]) => {
       setRequest((r) => ({ ...r, [key]: rows }))
     },
-    [setRequest],
+    [],
   )
 
+  // reset everything to initial state
   const resetRequest = () => {
     setResponse(null)
     setRequest(initialRequest())
     setActiveTab("request")
   }
 
+  // send API request via backend proxy
   const sendRequest = async () => {
     if (!finalUrl) return
     setSending(true)
@@ -95,11 +108,13 @@ export function MaaSApp() {
           bodyMode: request.bodyMode,
         }),
       })
+
       const data = (await res.json()) as ResponseModel
       const durationMs = Math.round(performance.now() - started)
       setResponse({ ...data, durationMs })
       setActiveTab("response")
 
+      // save request to history
       const entry: RequestModel = {
         ...request,
         id: uuid(),
@@ -127,6 +142,7 @@ export function MaaSApp() {
     }
   }
 
+  // load a request from history
   const loadFromHistory = (item: RequestModel) => {
     setRequest({
       id: uuid(),
@@ -142,6 +158,7 @@ export function MaaSApp() {
     setActiveTab("request")
   }
 
+  // clear history list
   const clearHistory = () => {
     setHistory([])
     saveHistory([])
@@ -149,16 +166,19 @@ export function MaaSApp() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4">
+      {/* Sidebar */}
       <aside className="bg-card border border-border rounded-lg">
         <Sidebar items={history} onSelect={loadFromHistory} onClear={clearHistory} />
       </aside>
 
+      {/* Main Section */}
       <section className="flex flex-col gap-4">
         <Card className="bg-card border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Request</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Request builder bar */}
             <div className="flex items-center gap-2">
               <Select
                 value={request.method}
@@ -192,7 +212,8 @@ export function MaaSApp() {
               </Button>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            {/* Tabs for request/response */}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="w-full">
               <TabsList className="grid grid-cols-2 w-[260px]">
                 <TabsTrigger value="request">Build</TabsTrigger>
                 <TabsTrigger value="response" disabled={!response}>
@@ -201,6 +222,7 @@ export function MaaSApp() {
               </TabsList>
 
               <TabsContent value="request" className="space-y-4">
+                {/* Params */}
                 <Card className="bg-card border border-border">
                   <CardHeader className="py-3">
                     <CardTitle className="text-sm">Query Params</CardTitle>
@@ -210,6 +232,7 @@ export function MaaSApp() {
                   </CardContent>
                 </Card>
 
+                {/* Headers */}
                 <Card className="bg-card border border-border">
                   <CardHeader className="py-3">
                     <CardTitle className="text-sm">Headers</CardTitle>
@@ -219,6 +242,7 @@ export function MaaSApp() {
                   </CardContent>
                 </Card>
 
+                {/* Body */}
                 <Card className="bg-card border border-border">
                   <CardHeader className="py-3">
                     <CardTitle className="text-sm">Body</CardTitle>
@@ -234,8 +258,10 @@ export function MaaSApp() {
                   </CardContent>
                 </Card>
 
+                {/* Final URL */}
                 <div className="text-xs text-muted-foreground">
-                  Final URL: <code className="bg-muted px-1 py-0.5 rounded">{finalUrl || "—"}</code>
+                  Final URL:{" "}
+                  <code className="bg-muted px-1 py-0.5 rounded">{finalUrl || "—"}</code>
                 </div>
               </TabsContent>
 

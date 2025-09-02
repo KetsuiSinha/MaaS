@@ -1,5 +1,3 @@
-"use client"
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { HttpMethod } from "@/lib/maas/types"
@@ -18,15 +16,26 @@ export function BodyEditor({
   onChangeMode: (m: "none" | "json" | "text") => void
   onChangeText: (v: string) => void
 }) {
-  const isBodyAllowed = useMemo(() => ["POST", "PUT", "PATCH"].includes(method), [method])
+  const isBodyAllowed = useMemo(
+    () => ["POST", "PUT", "PATCH"].includes(method),
+    [method]
+  )
 
   if (!isBodyAllowed) {
-    return <p className="text-sm text-muted-foreground">Body is not used with {method} requests.</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        Body is not used with {method} requests.
+      </p>
+    )
   }
 
   return (
     <div className="space-y-3">
-      <Tabs value={mode} onValueChange={(v) => onChangeMode(v as any)} className="w-full">
+      <Tabs
+        value={mode}
+        onValueChange={(v) => onChangeMode(v as "none" | "json" | "text")}
+        className="w-full"
+      >
         <TabsList>
           <TabsTrigger value="none">None</TabsTrigger>
           <TabsTrigger value="json">JSON</TabsTrigger>

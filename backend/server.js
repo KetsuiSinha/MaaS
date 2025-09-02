@@ -6,6 +6,7 @@ import projectRoutes from "./routes/projectRoutes.js";
 import mockRoutes from "./routes/mockRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import authRoutes from "./routes/authRoutes.js"
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
+app.use("/api/auth", authRoutes);
 
 // Connect to database
 connectDB();

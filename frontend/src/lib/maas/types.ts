@@ -1,24 +1,53 @@
-import type { RequestModel } from "./types"
+// frontend/src/lib/maas/types.ts
 
-const HISTORY_KEY = "maas_history:v1"
+// Allowed HTTP methods
+export type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "HEAD"
+  | "OPTIONS"
 
-export function loadHistory(): RequestModel[] {
-  if (typeof window === "undefined") return []
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as RequestModel[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+
+export type BodyMode = "none" | "text" | "json"
+// A single saved request (for history, collections, etc.)
+export interface RequestModel {
+  id: string
+  method: HttpMethod
+  url: string
+  createdAt: number // Date.now()
+  params: KeyValue[]      // query params
+  headers: KeyValue[]     // request headers
+  bodyMode: BodyMode      // body type
+  bodyText: string        // raw text body (for text/json modes)
 }
 
-export function saveHistory(items: RequestModel[]) {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 100)))
-  } catch {
-    // no-op
-  }
+export interface KeyValue {
+  id: string
+  key: string
+  value: string
+  enabled: boolean
+}
+
+export interface ResponseHeader {
+  name: string
+  value: string
+}
+
+export interface HeaderPair {
+  name: string
+  value: string
+}
+
+export interface ResponseModel {
+  ok: boolean
+  status: number
+  statusText: string
+  durationMs: number
+  sizeBytes: number
+  headers: HeaderPair[]
+  bodyText: string
+  bodyIsJson: boolean
 }
