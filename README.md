@@ -1,6 +1,3 @@
-Here’s a **detailed Markdown for your MaaS (Mock as a Service) project** that you can use for GitHub or documentation.
-
----
 
 # MaaS (Mock as a Service) 🚀
 
